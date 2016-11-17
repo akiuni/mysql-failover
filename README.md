@@ -57,7 +57,9 @@ Lastly, you must declare the BDD peer on each database server by registering ${B
  
 ## Installation
 
+
 First make sure all variables are properly set in your repl-watchdoc script. Especially the ${WORKINGDIR} must exist and have enough space to get at least 2 database dumps.
+
  
 You can run repl-watchdog directly from command line :
 
