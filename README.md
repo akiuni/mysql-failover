@@ -33,18 +33,22 @@ Each backend mysqlrouter has the following configuration :
     mode = read-write
 
 You can change bind_address to localhost and to another listening port, but remember to adjust repl-watchdog accordingly :
+
     ROUTER="127.0.0.1:7001"
 
 You **must** change destinations to the BddHost_A and BddHost_B IP addresses of your servers and adjust repl-watchdog.
+
     HOST_A="10.75.8.99:3306"
     HOST_B="10.75.8.100:3306"
 
 
 The Master-Slave MySQL cluster must be configred with GTID enabled and RW on both Master and Slave. Hence, the following lines are requiered in my.cnf :
+
     gtid_mode=ON
     enforce_gtid_consistency=ON
 
 Two users are needed in the database cluster. One for replication and another one for repl-watchdog. repl-watchdog user must have replication, dump and import rights, adjust repl-watchdog accordingly :
+
     GRANT ALL PRIVILEGES ON *.* TO '${MY_USER}'@'%' IDENTIFIED BY '${MY_PASSWD}';
     GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO '${BDD_PEER_USER}'@'%' IDENTIFIED BY '${BDD_PEER_PASSWORD}';
 
@@ -58,6 +62,7 @@ You can run repl-watchdog directly from command line :
     ./repl-watchdog --now 
 
 You can also create a crontab to execute it all the 10 minutes :
+
     */10 * * * * root /path/to//repl-watchdog > /dev/null  2>&1  
 
 
