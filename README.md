@@ -115,8 +115,24 @@ Each repl-watchdog script send a "SCAN <hostname>" status. The first record beco
 The operation master will first make a backup of the corrupted database in its working directory. Then, it will import he master database and restart the replication. Once all is done, it removes the ongoing_failover database.
 
 
+### status signals
 
-  
+Here is a list of possible signals in the ongoing_failover database :
+
+| Signal              |     Description                                                        |
+| ------------------- |: ----------------:                                                     |
+| SCAN <host>         | <host> is candidate for operation master election.                     |
+| MAST <host>         | <host> is the operation master.                                        |
+| FOLO <host>         | <host> is follower on this operation.                                  |
+| MAOK <host>         | master finished the job, it will now wait for the followers to finish. |
+| FOOK <host>         | follower finished the job.                                             |
+| TARG <socket>       | The master informs followers the new database master server.           |
+| OPER <fail or repl> | The master informs what kind of operation is running.                  |
+ 
+
+
+ 
+
 
 
       
