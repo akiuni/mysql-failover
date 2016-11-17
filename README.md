@@ -13,9 +13,9 @@ Julien
 
 This script is called repl-watchdog. It is intended to be run on each backend equiped by a local mysqlrouter which is configured to contact a Master-Slave MySQL Cluster :
 
-    Backend_A --> local mysqlrouter --> MySQL Master-Slave cluster : (BddHost_A BddHost_B)
-    Bachend_B --> local mysqlrouter /
-    Bachend_C --> local mysqlrouter /
+    Backend_A --' local mysqlrouter --' MySQL Master-Slave cluster : (BddHost_A BddHost_B)
+    Bachend_B --' local mysqlrouter /
+    Bachend_C --' local mysqlrouter /
     ...
 
 
@@ -67,7 +67,7 @@ You can run repl-watchdog directly from command line :
 
 You can also create a crontab to execute it all the 10 minutes :
 
-    */10 * * * * root /path/to//repl-watchdog > /dev/null  2>&1  
+    */10 * * * * root /path/to//repl-watchdog ' /dev/null  2'&1  
 
 ## Protocol description
 
@@ -85,17 +85,17 @@ In failover state, the repl-watchdog will create the database *ongoing_failover*
 
 * operation master election
 
-Each repl-watchdog script send a "SCAN <hostname>" status. The first record becomes the master of operations and confirms with a "MAST <hostname>" status
+Each repl-watchdog script send a "SCAN 'hostname'" status. The first record becomes the master of operations and confirms with a "MAST 'hostname'" status
 
 * followers declarations
 
-Each repl-watchdog  which have not beeing elected as master will declare itself as a follower : "FOLO <hostname"
+Each repl-watchdog  which have not beeing elected as master will declare itself as a follower : "FOLO 'hostname"
 
 * do the job
 
-the operation master first send a "TARG <socket>" status to inform the followers which is the new master. Then, it promotes the bdd slave server as new master, copy the database on the new slave, restart the replication and reset its local mysqlrouter status. Once all finished, it sends a "MAOK <hostname>" status       
+the operation master first send a "TARG 'socket'" status to inform the followers which is the new master. Then, it promotes the bdd slave server as new master, copy the database on the new slave, restart the replication and reset its local mysqlrouter status. Once all finished, it sends a "MAOK 'hostname'" status       
 
-the followers will wait for the "TARG" status and reset their local mysqlrouter configuration accordingly. Once finished, send a "FOOK <hostname>" status       
+the followers will wait for the "TARG" status and reset their local mysqlrouter configuration accordingly. Once finished, send a "FOOK 'hostname'" status       
 
 * terminate the operation
 
@@ -108,7 +108,7 @@ In failover state, the repl-watchdog will create the database *ongoing_failover*
 
 * operation master election
 
-Each repl-watchdog script send a "SCAN <hostname>" status. The first record becomes the master of operations and confirms with a "MAST <hostname>" status
+Each repl-watchdog script send a "SCAN 'hostname'" status. The first record becomes the master of operations and confirms with a "MAST 'hostname'" status
 
 * do the job
  
@@ -119,15 +119,15 @@ The operation master will first make a backup of the corrupted database in its w
 
 Here is a list of possible signals in the ongoing_failover database :
 
- | Signal              |     Description                                                        |
- | ------------------- |: ----------------:                                                     |
- | SCAN <host>         | <host> is candidate for operation master election.                     |
- | MAST <host>         | <host> is the operation master.                                        |
- | FOLO <host>         | <host> is follower on this operation.                                  |
- | MAOK <host>         | master finished the job, it will now wait for the followers to finish. |
- | FOOK <host>         | follower finished the job.                                             |
- | TARG <socket>       | The master informs followers the new database master server.           |
- | OPER <fail or repl> | The master informs what kind of operation is running.                  |
+    | Signal              |     Description                                                        |
+    | ------------------- |: ----------------:                                                     |
+    | SCAN 'host'         | 'host' is candidate for operation master election.                     |
+    | MAST 'host'         | 'host' is the operation master.                                        |
+    | FOLO 'host'         | 'host' is follower on this operation.                                  |
+    | MAOK 'host'         | master finished the job, it will now wait for the followers to finish. |
+    | FOOK 'host'         | follower finished the job.                                             |
+    | TARG 'socket'       | The master informs followers the new database master server.           |
+    | OPER 'fail or repl' | The master informs what kind of operation is running.                  |
  
 
 
