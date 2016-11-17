@@ -1,27 +1,46 @@
 #!/bin/bash
-# failover MySQL automatique 
-# Script a executer sur les backends
+# automatic MySQL failover 
+# To be executed on the backends
 
 VERSION="1.2"
 [[ "x$@x" =~ .*--version.* ]] && echo "Version : ${VERSION}" && exit 0
           
-#GRANT ALL PRIVILEGES ON *.* TO 'repl-watchdog'@'%' IDENTIFIED BY 'fae4669d09a763a2a937adbabb555f42';
 
 
-#parameters
+##################
+### parameters ###
+##################
 LOG=true
 VERBOSE=true
 
+# target sockets 
 ROUTER="127.0.0.1:7001"
 HOST_A="10.75.8.99:3306"
 HOST_B="10.75.8.100:3306"
 
+# repl-watchdog username in database ( GRANT ALL PRIVILEGES ON *.* TO '${MY_USER}'@'%' IDENTIFIED BY '${MY_PASSWD}'; )
 MY_USER="repl-watchdog"
 MY_PASSWD='fae4669d09a763a2a937adbabb555f42'
 
+# daemon options 
 PIDFILE="/var/log/mysql-failover.pid"
 
+# BDD Server local configuration
+BDD_PEER="bdd-peer" # configured in BDD /etc/hosts 
+BDD_PEER_PORT=3306 
+BDD_PEER_USER='repl'  # GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO '${BDD_PEER_USER}'@'%' IDENTIFIED BY '${BDD_PEER_PASSWORD}';
+BDD_PEER_PASSWORD='69855294b41c7b61f286368777cc017f'
+
+
+
+###################################################################################################################################
+############################# do not edit anything below this line unless you know what you are doing ############################# 
+###################################################################################################################################
+ 
+#################
 ### functions ###
+#################
+
 function log_msg() {
   $LOG && logger -p local0.notice repl-watchdog: $1
   $VERBOSE && echo "notice : $1"  
@@ -202,7 +221,7 @@ if ( ( ${A_MASTER} && ${B_TARGET} ) || ( ${B_MASTER} && ${A_TARGET} ) ); then
     
       log_msg "restarting replication"
       QUERY="flush privileges;" ; RS=$( ${QUERY_NEW_SLAVE} "${QUERY}" )
-      QUERY="CHANGE MASTER TO MASTER_HOST ='master.bke.integra.fr', MASTER_PORT=3306, MASTER_USER='repl', MASTER_PASSWORD='in2repl', MASTER_AUTO_POSITION=1;" ; RS=$( ${QUERY_NEW_SLAVE} "${QUERY}" )
+      QUERY="CHANGE MASTER TO MASTER_HOST ='${BDD_PEER}', MASTER_PORT=${BDD_PEER_PORT}, MASTER_USER='${BDD_PEER_USER}', MASTER_PASSWORD='${BDD_PEER_PASSWORD}', MASTER_AUTO_POSITION=1;" ; RS=$( ${QUERY_NEW_SLAVE} "${QUERY}" )
       QUERY="start slave;" ; RS=$( ${QUERY_NEW_SLAVE} "${QUERY}" )
      
       log_msg "resetting mysqlrouter order"
@@ -299,7 +318,7 @@ elif ${REPL_KO}; then
     
       log_msg "restarting replication"
       QUERY="flush privileges;" ; RS=$( ${QUERY_SLAVE} "${QUERY}" )
-      QUERY="CHANGE MASTER TO MASTER_HOST ='master.bke.integra.fr', MASTER_PORT=3306, MASTER_USER='repl', MASTER_PASSWORD='in2repl', MASTER_AUTO_POSITION=1;" ; RS=$( ${QUERY_SLAVE} "${QUERY}" )
+      QUERY="CHANGE MASTER TO MASTER_HOST ='${BDD_PEER}', MASTER_PORT=${BDD_PEER_PORT}, MASTER_USER='${BDD_PEER_USER}', MASTER_PASSWORD='${BDD_PEER_PASSWORD}', MASTER_AUTO_POSITION=1;" ; RS=$( ${QUERY_SLAVE} "${QUERY}" )
       QUERY="start slave;" ; RS_B=$( ${QUERY_SLAVE} "${QUERY}" )
   
       log_msg "replication done, removing lock"
