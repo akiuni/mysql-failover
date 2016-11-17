@@ -24,7 +24,7 @@ MY_PASSWD='fae4669d09a763a2a937adbabb555f42'
 
 # daemon options 
 PIDFILE="/var/log/mysql-failover.pid"
-
+WORKINGDIR="/tmp/repl-data"
 # BDD Server local configuration
 BDD_PEER="bdd-peer" # configured in BDD /etc/hosts 
 BDD_PEER_PORT=3306 
@@ -57,6 +57,12 @@ function stop_error() {
   [[ -f ${PIDFILE} ]] && rm -f ${PIDFILE}
   exit 1
 }
+
+
+############
+### main ###
+############
+
 
 ### check usage and delay execution 
 [[ -f ${PIDFILE} ]] && log_warning "process already running, exiting" && exit 0 || echo $$ > ${PIDFILE}
@@ -117,6 +123,10 @@ export MYSQL_PWD=${MY_PASSWD}
 
 ### get router target ###
 QUERY="SELECT @@server_id;"
+      ##################
+      ### DOWN state ### 
+      ##################
+
 RS_R=$( ${QUERY_R} "${QUERY}" ) ; ! [[ "x${RS_R}x" =~ x@@server_id[[:space:]][0-9]x ]] && stop_error "unable to connect ${ROUTER}"
 RS_A=$( ${QUERY_A} "${QUERY}" ) ; ! [[ "x${RS_A}x" =~ x@@server_id[[:space:]][0-9]x ]] && stop_error "${HOST_A} is DOWN !" #&& A_UP=false
 RS_B=$( ${QUERY_B} "${QUERY}" ) ; ! [[ "x${RS_B}x" =~ x@@server_id[[:space:]][0-9]x ]] && stop_error "${HOST_B} is DOWN !" #&& B_UP=false
@@ -212,12 +222,12 @@ if ( ( ${A_MASTER} && ${B_TARGET} ) || ( ${B_MASTER} && ${A_TARGET} ) ); then
         
       log_msg "dumping all databases"
       TS=$( date +%s )
-      mkdir -p /production/tmp_integra/repl-watchdog_${TS} >/dev/null 2>&1
-      $DUMP_NEW_MASTER > /production/tmp_integra/repl-watchdog_${TS}/dump.sql
+      mkdir -p ${WORKINGDIR}/repl-watchdog_${TS} >/dev/null 2>&1
+      $DUMP_NEW_MASTER > ${WORKINGDIR}/repl-watchdog_${TS}/dump.sql
     
       log_msg "importing databases"
       QUERY="reset master;" ; RS=$( ${QUERY_NEW_SLAVE} "${QUERY}" )
-      $IMPORT_NEW_SLAVE < /production/tmp_integra/repl-watchdog_${TS}/dump.sql
+      $IMPORT_NEW_SLAVE < ${WORKINGDIR}/repl-watchdog_${TS}/dump.sql
     
       log_msg "restarting replication"
       QUERY="flush privileges;" ; RS=$( ${QUERY_NEW_SLAVE} "${QUERY}" )
@@ -307,14 +317,14 @@ elif ${REPL_KO}; then
       QUERY="reset slave all;" ; RS=$( ${QUERY_SLAVE} "${QUERY}" )
       
       log_msg "dumping all databases"
-      $DUMP_SLAVE | /bin/gzip -9 > /production/tmp_integra/replfailure_${SOCK_SLAVE}_$(date +%Y%m%d%H%M%S).sql.gz
-      mkdir -p /production/tmp_integra/repl-watchdog_${TS} >/dev/null 2>&1
-      $DUMP_MASTER > /production/tmp_integra/repl-watchdog_${TS}/dump.sql
-      log_warning "corrupted database stored to /production/tmp_integra/replfailure_${SOCK_SLAVE}_$(date +%Y%m%d%H%M%S).sql.gz"
+      $DUMP_SLAVE | /bin/gzip -9 > ${WORKINGDIR}/replfailure_${SOCK_SLAVE}_$(date +%Y%m%d%H%M%S).sql.gz
+      mkdir -p ${WORKINGDIR}/repl-watchdog_${TS} >/dev/null 2>&1
+      $DUMP_MASTER > ${WORKINGDIR}/repl-watchdog_${TS}/dump.sql
+      log_warning "corrupted database stored to ${WORKINGDIR}/replfailure_${SOCK_SLAVE}_$(date +%Y%m%d%H%M%S).sql.gz"
           
       log_msg "importing databases"
       QUERY="reset master;" ; RS=$( ${QUERY_SLAVE} "${QUERY}" )
-      $IMPORT_SLAVE < /production/tmp_integra/repl-watchdog_${TS}/dump.sql
+      $IMPORT_SLAVE < ${WORKINGDIR}/repl-watchdog_${TS}/dump.sql
     
       log_msg "restarting replication"
       QUERY="flush privileges;" ; RS=$( ${QUERY_SLAVE} "${QUERY}" )
@@ -323,7 +333,7 @@ elif ${REPL_KO}; then
   
       log_msg "replication done, removing lock"
       QUERY="drop database ongoing_failover;" ; RS=$( ${QUERY_MASTER} "${QUERY}" )
-      rm -rf /production/tmp_integra/repl-watchdog_* >/dev/null 2>&1
+      rm -rf ${WORKINGDIR}/repl-watchdog_* >/dev/null 2>&1
     
     else
       log_warning "another operation is running on this server"
@@ -350,7 +360,7 @@ else
       log_msg "all followers are up to date, removing lock"
       
       QUERY="drop database ongoing_failover;" ; RS=$( ${QUERY_MASTER} "${QUERY}" )
-      rm -rf /production/tmp_integra/repl-watchdog_* >/dev/null 2>&1
+      rm -rf ${WORKINGDIR}/repl-watchdog_* >/dev/null 2>&1
         
       log_msg "replication and failover ok"    
     else

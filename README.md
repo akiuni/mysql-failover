@@ -29,7 +29,7 @@ Each backend mysqlrouter has the following configuration :
     bind_address = 0.0.0.0:7001
     connect_timeout = 3
     client_connect_timeout = 9
-    destinations = 10.75.8.100,10.75.8.99
+    destinations = ${IP_BDDSERVER_A},${IP_BDDSERVER_B}
     mode = read-write
 
 You can change bind_address to localhost and to another listening port, but remember to adjust repl-watchdog accordingly :
@@ -38,8 +38,8 @@ You can change bind_address to localhost and to another listening port, but reme
 
 You **must** change destinations to the BddHost_A and BddHost_B IP addresses of your servers and adjust repl-watchdog.
 
-    HOST_A="10.75.8.99:3306"
-    HOST_B="10.75.8.100:3306"
+    HOST_A="${IP_BDDSERVER_A}:3306"
+    HOST_B="${IP_BDDSERVER_B}:3306"
 
 
 The Master-Slave MySQL cluster must be configred with GTID enabled and RW on both Master and Slave. Hence, the following lines are requiered in my.cnf :
@@ -57,6 +57,8 @@ Lastly, you must declare the BDD peer on each database server by registering ${B
  
 ## Installation
 
+First make sure all variables are properly set in your repl-watchdoc script. Especially the ${WORKINGDIR} must exist and have enough space to get at least 2 database dumps.
+ 
 You can run repl-watchdog directly from command line :
 
     ./repl-watchdog --now 
@@ -65,7 +67,48 @@ You can also create a crontab to execute it all the 10 minutes :
 
     */10 * * * * root /path/to//repl-watchdog > /dev/null  2>&1  
 
+## Protocol description
 
+each repl-watchdog script (running of the backends) will test the cluster status. 4 states can be identified :
+
+* down state : One of the bdd server is down. repl-watchdog won't do anything in this state.
+* failover state : the queries are sent to the slave database server. This means that the master server has crashed, repl-watchdog will promote the slave as master and restart the replication on the new slave.
+* recover state : the queries are sent to the master database server but the replication is broken on the slave. repl-watchdog will recover the replication.
+* ok state: all is fine, queries are redirected to master database server and replication is ok on the slave.
+ 
+### failover state
+
+In failover state, the repl-watchdog will create the database *ongoing_failover* and the table *status* inside so as to communicate with other repl-watchdog scripts. 
+
+1. operation master election
+
+Each repl-watchdog script send a "SCAN <hostname>" status. The first record becomes the master of operations and confirms with a "MAST <hostname>" status
+
+2. followers declarations
+
+Each repl-watchdog  which have not beeing elected as master will declare itself as a follower : "FOLO <hostname"
+
+3. do the job
+
+the operation master first send a "TARG <socket>" status to inform the followers which is the new master. Then, it promotes the bdd slave server as new master, copy the database on the new slave, restart the replication and reset its local mysqlrouter status. Once all finished, it sends a "MAOK <hostname>" status       
+
+the followers will wait for the "TARG" status and reset their local mysqlrouter configuration accordingly. Once finished, send a "FOOK <hostname>" status       
+
+3. terminate the operation
+
+When the operation master detects that all folowers sent their "FOOK" status, remove the ongoing_failover database.
+
+### recover state
+
+In failover state, the repl-watchdog will create the database *ongoing_failover* and the table *status* inside so as to communicate with other repl-watchdog scripts. 
+
+1. operation master election
+
+Each repl-watchdog script send a "SCAN <hostname>" status. The first record becomes the master of operations and confirms with a "MAST <hostname>" status
+
+2. do the job
+ 
+The operation master will first make a backup of the corrupted database in its working directory. Then, it will import he master database and restart the replication. Once all is done, it removes the ongoing_failover database.
 
 
 
