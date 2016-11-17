@@ -13,10 +13,10 @@ Julien
 
 This script is called repl-watchdog. It is intended to be run on each backend equiped by a local mysqlrouter which is configured to contact a Master-Slave MySQL Cluster :
 
-`Backend_A --> local mysqlrouter --> MySQL Master-Slave cluster : (BddHost_A BddHost_B)
-Bachend_B --> local mysqlrouter /
-Bachend_C --> local mysqlrouter /
-...`
+    Backend_A --> local mysqlrouter --> MySQL Master-Slave cluster : (BddHost_A BddHost_B)
+    Bachend_B --> local mysqlrouter /
+    Bachend_C --> local mysqlrouter /
+    ...
 
 
 ## Prerequisites
