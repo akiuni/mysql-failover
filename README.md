@@ -77,38 +77,40 @@ each repl-watchdog script (running of the backends) will test the cluster status
 * failover state : the queries are sent to the slave database server. This means that the master server has crashed, repl-watchdog will promote the slave as master and restart the replication on the new slave.
 * recover state : the queries are sent to the master database server but the replication is broken on the slave. repl-watchdog will recover the replication.
 * ok state: all is fine, queries are redirected to master database server and replication is ok on the slave.
+
  
 ### failover state
 
 In failover state, the repl-watchdog will create the database *ongoing_failover* and the table *status* inside so as to communicate with other repl-watchdog scripts. 
 
-1. operation master election
+* operation master election
 
 Each repl-watchdog script send a "SCAN <hostname>" status. The first record becomes the master of operations and confirms with a "MAST <hostname>" status
 
-2. followers declarations
+* followers declarations
 
 Each repl-watchdog  which have not beeing elected as master will declare itself as a follower : "FOLO <hostname"
 
-3. do the job
+* do the job
 
 the operation master first send a "TARG <socket>" status to inform the followers which is the new master. Then, it promotes the bdd slave server as new master, copy the database on the new slave, restart the replication and reset its local mysqlrouter status. Once all finished, it sends a "MAOK <hostname>" status       
 
 the followers will wait for the "TARG" status and reset their local mysqlrouter configuration accordingly. Once finished, send a "FOOK <hostname>" status       
 
-3. terminate the operation
+* terminate the operation
 
 When the operation master detects that all folowers sent their "FOOK" status, remove the ongoing_failover database.
+
 
 ### recover state
 
 In failover state, the repl-watchdog will create the database *ongoing_failover* and the table *status* inside so as to communicate with other repl-watchdog scripts. 
 
-1. operation master election
+* operation master election
 
 Each repl-watchdog script send a "SCAN <hostname>" status. The first record becomes the master of operations and confirms with a "MAST <hostname>" status
 
-2. do the job
+* do the job
  
 The operation master will first make a backup of the corrupted database in its working directory. Then, it will import he master database and restart the replication. Once all is done, it removes the ongoing_failover database.
 
