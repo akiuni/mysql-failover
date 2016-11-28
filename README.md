@@ -130,7 +130,10 @@ Here is a list of possible signals in the ongoing_failover database :
     | OPER 'fail or repl' | The master informs what kind of operation is running.                  |
  
 
+## Contacts and examples
 
+At this date, this script is in production on www.rex-d.com website
+    
  
 
 
