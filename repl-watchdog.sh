@@ -2,8 +2,8 @@
 # automatic MySQL failover 
 # To be executed on the backends
 
-VERSION="1.2"
-[[ "x$@x" =~ .*--version.* ]] && echo "Version : ${VERSION}" && exit 0
+VERSION="1.3.2"
+[[ "x$@x" =~ .*version.* ]] && echo "Version : ${VERSION}" && exit 0
           
 
 
@@ -65,8 +65,8 @@ function stop_error() {
 
 
 ### check usage and delay execution 
-[[ -f ${PIDFILE} ]] && log_warning "process already running, exiting" && exit 0 || echo $$ > ${PIDFILE}
-! [[ "x$@x" =~ .*--now.* ]] && sleep $(( $( date +%N | head -c 2 ) * 3 ))
+[[ -f ${PIDFILE} ]] && kill -0 $( cat ${PIDFILE} ) 2>/dev/null && log_warning "process already running, exiting" && exit 0 || echo $$ > ${PIDFILE}
+! [[ "x$@x" =~ .*now.* ]] && sleep $(( $( date +%N | head -c 2 ) * 3 ))
 
 
 
